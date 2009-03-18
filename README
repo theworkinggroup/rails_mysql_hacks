@@ -1,0 +1,10 @@
+MySQL Hacks
+===========
+
+This is a collection of extensions for the MySQL part of ActiveRecord and associated modules.
+
+ * Support for FORCE INDEX in queries via find(:all, :index => 'index_name')
+ * Support for SQL_CALC_FOUND_ROWS via find(:all, :count_rows => true)
+ * Support for FULLTEXT INDEX via add_fulltext_index method for migrations
+ * Support within schema.rb for MySQL VIEWs
+ 
