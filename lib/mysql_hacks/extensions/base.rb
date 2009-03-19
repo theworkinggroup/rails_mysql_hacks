@@ -38,7 +38,7 @@ protected
     add_joins!(sql, options[:joins], scope)
     add_conditions!(sql, options[:conditions], scope)
 
-    add_group!(sql, options[:group], scope)
+    add_group!(sql, options[:group], options[:having], scope)
     add_order!(sql, options[:order], scope)
     add_limit!(sql, options, scope)
     add_lock!(sql, options, scope)
