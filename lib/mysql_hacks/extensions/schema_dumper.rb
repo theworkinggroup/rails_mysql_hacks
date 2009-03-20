@@ -24,7 +24,7 @@ class ActiveRecord::SchemaDumper
     views = [ ]
 
     @connection.tables.sort.each do |table_name|
-      next if ["schema_info", ignore_tables].flatten.any? do |ignored|
+      next if ["schema_migrations", ignore_tables].flatten.any? do |ignored|
         case ignored
         when String; table_name == ignored
         when Regexp; table_name =~ ignored
