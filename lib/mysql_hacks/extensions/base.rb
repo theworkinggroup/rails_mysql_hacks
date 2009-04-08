@@ -113,6 +113,23 @@ protected
     sql << " ORDER BY #{order}" unless order.blank?
   end
   
+  if (ActiveRecord::VERSION::STRING < '2.3.0')
+    # Patch to provide backwards compatibility with the 2.3.x :having parameter
+    # by including the more modern add_group! method here
+    def self.add_group!((sql, group, having, scope = :auto)
+      if group
+        sql << " GROUP BY #{group}"
+        sql << " HAVING #{sanitize_sql_for_conditions(having)}" if having
+      else
+        scope = scope(:find) if :auto == scope
+        if scope && (scoped_group = scope[:group])
+          sql << " GROUP BY #{scoped_group}"
+          sql << " HAVING #{sanitize_sql_for_conditions(scope[:having])}" if scope[:having]
+        end
+      end
+    end
+  end
+  
   # -- Custom Extensions ----------------------------------------------------
   
   def self.select_columns(*columns)
