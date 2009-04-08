@@ -1,6 +1,8 @@
 class ActiveRecord::Base
   class << self
-    __base_options = VALID_FIND_OPTIONS.dup
+    # Force in some additional options that can be used by find(...)
+    # by reinitializing VALID_FIND_OPTIONS
+    __base_options = VALID_FIND_OPTIONS
     
     remove_const(:VALID_FIND_OPTIONS)
 
@@ -9,31 +11,46 @@ class ActiveRecord::Base
     ]
   end
 
+  # The square bracket operator allows a model to be used as a sort of associative array, where
+  # records can be retrieved directly by id.
+  #
+  # ==== Parameters
+  #
+  # * +id+ - The id for the record to be retrieved.
+  #
+  # ==== Examples
+  #
+  #   # Fetch the first user created
+  #   user = User[1]
+  
   def self.[](id)
     find(id)
   end
 
 protected
+  # -- Patches to ActiveRecord::Base Methods --------------------------------
+  
   def self.construct_finder_sql(options)
     # Additions: Support for :count_rows, :index
     scope = scope(:find)
     sql  = 'SELECT '
     
-    # adding count_rows
+    # <patch>
     if (options[:count_rows])
       sql << 'SQL_CALC_FOUND_ROWS '
     end
+    # <.patch>
     
     sql << "#{options[:select] || (scope && scope[:select]) || default_select(options[:joins] || (scope && scope[:joins]))} "
-    
     sql << "FROM #{(scope && scope[:from]) || options[:from] || quoted_table_name} "
     
-    # adding force index
+    # <patch>
     if ((scope and scope[:index]) || options[:index])
       sql << 'FORCE INDEX ('
       sql << [ (scope and scope[:index]) || options[:index] ].flatten.collect { |i| i.to_s } * ','
       sql << ') '
     end
+    # </patch>
 
     add_joins!(sql, options[:joins], scope)
     add_conditions!(sql, options[:conditions], scope)
@@ -50,20 +67,22 @@ protected
     scope = scope(:find)
     sql = 'SELECT '
     
-    # Patch for :count_rows
+    # <patch>
     if (options[:count_rows])
       sql << 'SQL_CALC_FOUND_ROWS '
     end
+    # </patch>
     
     sql << "#{column_aliases(join_dependency)} FROM #{(scope && scope[:from]) || options[:from] || quoted_table_name} "
     sql << join_dependency.join_associations.collect{|join| join.association_join }.join
     
-    # Patch for :index
+    # <patch>
     if (options[:index])
       sql << 'FORCE INDEX ('
       sql << [ options[:index] ].flatten.collect { |i| i.to_s } * ','
       sql << ') '
     end
+    # </patch>
     
     add_joins!(sql, options[:joins], scope)
     add_conditions!(sql, options[:conditions], scope)
@@ -94,6 +113,34 @@ protected
     sql << " ORDER BY #{order}" unless order.blank?
   end
 
+  def update_all(updates, conditions = nil, options = {})
+    sql  = "UPDATE #{quoted_table_name} SET #{sanitize_sql_for_assignment(updates)} "
+
+    scope = scope(:find)
+
+    select_sql = ""
+    # <patch>
+    add_joins!(select_sql, { }, scope)
+    # </patch>
+    add_conditions!(select_sql, conditions, scope)
+
+    if options.has_key?(:limit) || (scope && scope[:limit])
+      # Only take order from scope if limit is also provided by scope, this
+      # is useful for updating a has_many association with a limit.
+      add_order!(select_sql, options[:order], scope)
+
+      add_limit!(select_sql, options, scope)
+      sql.concat(connection.limited_update_conditions(select_sql, quoted_table_name, connection.quote_column_name(primary_key)))
+    else
+      add_order!(select_sql, options[:order], nil)
+      sql.concat(select_sql)
+    end
+
+    connection.update(sql, "#{name} Update")
+  end
+  
+  # -- Custom Extensions ----------------------------------------------------
+  
   def self.select_columns(*columns)
     return if (columns.empty?)
     
@@ -106,6 +153,7 @@ protected
     sql << quoted_table_name
     sql << ' '
 
+    add_joins!(sql, options[:joins], scope)
     add_conditions!(sql, options[:conditions], scope)
     add_order!(sql, options[:order], scope)
     add_limit!(sql, options, scope)
@@ -118,21 +166,31 @@ protected
     end
   end
   
+  # -- Enumerable Behavior --------------------------------------------------
+  
   def self.select(*args)
     self.select_columns(*args)
   end
   
   def self.each(key_column = :id, &block)
     self.select(key_column).each do |key|
-      yield(find_by_id(key))
+      yield(find(key))
+    rescue ActiveRecord::RecordNotFound
+      # Ignore records which may have been deleted between the time the
+      # list is created and the record is fetched.
     end
   end
 
   def self.each_with_index(key_column = :id, &block)
-    self.select(:id).each_with_index do |key, i|
-      yield(find_by_id(key), i)
+    self.select(key_column).each_with_index do |key, i|
+      yield(find(key), i)
+    rescue ActiveRecord::RecordNotFound
+      # Ignore records which may have been deleted between the time the
+      # list is created and the record is fetched.
     end
   end
+
+  # -- Mass Change Methods --------------------------------------------------
 
   def self.reset!
     connection.execute("DELETE FROM #{table_name}")
