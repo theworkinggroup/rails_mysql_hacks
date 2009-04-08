@@ -174,19 +174,23 @@ protected
   
   def self.each(key_column = :id, &block)
     self.select(key_column).each do |key|
-      yield(find(key))
-    rescue ActiveRecord::RecordNotFound
-      # Ignore records which may have been deleted between the time the
-      # list is created and the record is fetched.
+      begin
+        yield(find(key))
+      rescue ActiveRecord::RecordNotFound
+        # Ignore records which may have been deleted between the time the
+        # list is created and the record is fetched.
+      end
     end
   end
 
   def self.each_with_index(key_column = :id, &block)
     self.select(key_column).each_with_index do |key, i|
-      yield(find(key), i)
-    rescue ActiveRecord::RecordNotFound
-      # Ignore records which may have been deleted between the time the
-      # list is created and the record is fetched.
+      begin
+        yield(find(key), i)
+      rescue ActiveRecord::RecordNotFound
+        # Ignore records which may have been deleted between the time the
+        # list is created and the record is fetched.
+      end
     end
   end
 
