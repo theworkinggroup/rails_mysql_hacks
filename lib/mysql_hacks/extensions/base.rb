@@ -113,7 +113,7 @@ protected
     sql << " ORDER BY #{order}" unless order.blank?
   end
 
-  def update_all(updates, conditions = nil, options = {})
+  def self.update_all(updates, conditions = nil, options = {})
     sql  = "UPDATE #{quoted_table_name} SET #{sanitize_sql_for_assignment(updates)} "
 
     scope = scope(:find)
