@@ -116,7 +116,7 @@ protected
   if (ActiveRecord::VERSION::STRING < '2.3.0')
     # Patch to provide backwards compatibility with the 2.3.x :having parameter
     # by including the more modern add_group! method here
-    def self.add_group!((sql, group, having, scope = :auto)
+    def self.add_group!(sql, group, having, scope = :auto)
       if group
         sql << " GROUP BY #{group}"
         sql << " HAVING #{sanitize_sql_for_conditions(having)}" if having
