@@ -112,32 +112,6 @@ protected
     
     sql << " ORDER BY #{order}" unless order.blank?
   end
-
-  def self.update_all(updates, conditions = nil, options = {})
-    sql  = "UPDATE #{quoted_table_name} SET #{sanitize_sql_for_assignment(updates)} "
-
-    scope = scope(:find)
-
-    select_sql = ""
-    # <patch>
-    add_joins!(select_sql, { }, scope)
-    # </patch>
-    add_conditions!(select_sql, conditions, scope)
-
-    if options.has_key?(:limit) || (scope && scope[:limit])
-      # Only take order from scope if limit is also provided by scope, this
-      # is useful for updating a has_many association with a limit.
-      add_order!(select_sql, options[:order], scope)
-
-      add_limit!(select_sql, options, scope)
-      sql.concat(connection.limited_update_conditions(select_sql, quoted_table_name, connection.quote_column_name(primary_key)))
-    else
-      add_order!(select_sql, options[:order], nil)
-      sql.concat(select_sql)
-    end
-
-    connection.update(sql, "#{name} Update")
-  end
   
   # -- Custom Extensions ----------------------------------------------------
   
