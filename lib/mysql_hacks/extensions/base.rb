@@ -139,7 +139,7 @@ protected
     options = (columns.last.is_a?(Hash) ? columns.pop : { })
     
     sql = 'SELECT '
-    sql << columns.collect { |column| column.split('.').enum_with_index.collect{|x,i| (i==0) ? "`#{x}`" : x}.join('.') } * ','
+    sql << columns.collect { |column| column.split('.').enum_with_index.collect{|x,i| (i!=0) ? "`#{x}`" : x}.join('.') } * ','
     sql << ' FROM '
     sql << quoted_table_name
     sql << ' '
