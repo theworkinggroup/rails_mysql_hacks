@@ -137,9 +137,10 @@ protected
     
     scope = scope(:find)
     options = (columns.last.is_a?(Hash) ? columns.pop : { })
+    columns = columns.flatten
     
     sql = 'SELECT '
-    sql << columns.collect { |column| column.split('.').enum_with_index.collect{|x,i| (i!=0) ? "`#{x}`" : x}.join('.') } * ','
+    sql << columns.collect { |column| column.split('.').collect{ |v| "`#{v}`" }.join('.') }.join(', ')
     sql << ' FROM '
     sql << quoted_table_name
     sql << ' '
