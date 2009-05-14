@@ -140,7 +140,7 @@ protected
     columns = columns.flatten
     
     sql = 'SELECT '
-    sql << columns.collect { |column| column.split('.').collect{ |v| "`#{v}`" }.join('.') }.join(', ')
+    sql << columns.collect { |column| column.to_s.split('.').collect{ |v| "`#{v}`" }.join('.') }.join(', ')
     sql << ' FROM '
     sql << quoted_table_name
     sql << ' '
